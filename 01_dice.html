@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3개 주사위 던지기 게임</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #333;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    h1 {
+      margin-bottom: 0.5rem;
+      color: #4a4a4a;
+    }
+
+    p.subtitle {
+      color: #777;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* 주사위 영역 */
+    .dice-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 2rem;
+      perspective: 1000px;
+    }
+
+    .dice {
+      width: 80px;
+      height: 80px;
+      background-color: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15), inset 0 0 15px rgba(0, 0, 0, 0.05);
+      border: 2px solid #eaeaea;
+      display: grid;
+      grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+      padding: 10px;
+      transition: transform 0.1s ease;
+    }
+
+    /* 주사위 점(Dot) 스타일 */
+    .dot {
+      width: 14px;
+      height: 14px;
+      background-color: #333;
+      border-radius: 50%;
+      justify-self: center;
+      align-self: center;
+      visibility: hidden;
+    }
+
+    /* 굴리는 애니메이션 클래스 */
+    .shake {
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-20deg) scale(1.1); }
+      40% { transform: rotate(20deg) scale(1.1); }
+      60% { transform: rotate(-10deg) scale(1.1); }
+      80% { transform: rotate(10deg) scale(1.1); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+
+    /* 버튼 스타일 */
+    .roll-btn {
+      background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+      color: white;
+      border: none;
+      padding: 15px 35px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .roll-btn:hover {
+      transform: translateY(-2deg);
+      box-shadow: 0 8px 20px rgba(255, 75, 43, 0.6);
+    }
+
+    .roll-btn:active {
+      transform: translateY(1deg);
+    }
+
+    .roll-btn:disabled {
+      background: #ccc;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* 결과 영역 */
+    .result-box {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px dashed #eee;
+    }
+
+    .total-score {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .special-msg {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #ff4757;
+      min-height: 1.5em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🎲 주사위 게임</h1>
+    <p class="subtitle">3개의 주사위를 굴려 점수를 확인하세요!</p>
+
+    <!-- 주사위 3개 -->
+    <div class="dice-container">
+      <div class="dice" id="dice1"></div>
+      <div class="dice" id="dice2"></div>
+      <div class="dice" id="dice3"></div>
+    </div>
+
+    <!-- 버튼 -->
+    <button class="roll-btn" id="rollBtn" onclick="rollDice()">주사위 굴리기</button>
+
+    <!-- 결과 Display -->
+    <div class="result-box">
+      <div class="total-score">합계: <span id="total">0</span></div>
+      <div class="special-msg" id="message"></div>
+    </div>
+  </div>
+
+  <script>
+    // 주사위 눈 배치 매핑 (3x3 그리드 위치)
+    const dotPositions = {
+      1: [5],
+      2: [1, 9],
+      3: [1, 5, 9],
+      4: [1, 3, 7, 9],
+      5: [1, 3, 5, 7, 9],
+      6: [1, 3, 4, 6, 7, 9]
+    };
+
+    // 주사위 UI 초기화 (3x3 grid 생성)
+    function initDice(diceElement) {
+      diceElement.innerHTML = '';
+      for (let i = 1; i <= 9; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        dot.dataset.pos = i;
+        diceElement.appendChild(dot);
+      }
+    }
+
+    const diceElements = [
+      document.getElementById('dice1'),
+      document.getElementById('dice2'),
+      document.getElementById('dice3')
+    ];
+
+    diceElements.forEach(initDice);
+
+    // 특정 주사위에 숫자(눈) 그리기
+    function renderDice(diceElement, value) {
+      const dots = diceElement.querySelectorAll('.dot');
+      const activePositions = dotPositions[value];
+
+      dots.forEach(dot => {
+        const pos = parseInt(dot.dataset.pos);
+        if (activePositions.includes(pos)) {
+          dot.style.visibility = 'visible';
+          // 1일 때는 빨간색 점으로 강조
+          dot.style.backgroundColor = (value === 1) ? '#e74c3c' : '#333';
+        } else {
+          dot.style.visibility = 'hidden';
+        }
+      });
+    }
+
+    // 초기 화면용 (모두 1로 출력)
+    diceElements.forEach(dice => renderDice(dice, 1));
+
+    // 주사위 굴리기 메인 함수
+    function rollDice() {
+      const btn = document.getElementById('rollBtn');
+      const totalEl = document.getElementById('total');
+      const msgEl = document.getElementById('message');
+
+      btn.disabled = true; // 애니메이션 중 버튼 비활성화
+      msgEl.textContent = '';
+
+      // 흔들리는 애니메이션 추가
+      diceElements.forEach(dice => dice.classList.add('shake'));
+
+      // 0.5초(애니메이션 시간) 후 결과 계산
+      setTimeout(() => {
+        const values = [];
+        let total = 0;
+
+        diceElements.forEach(dice => {
+          dice.classList.remove('shake');
+          const randValue = Math.floor(Math.random() * 6) + 1;
+          values.push(randValue);
+          total += randValue;
+          renderDice(dice, randValue);
+        });
+
+        // 결과 업데이트
+        totalEl.textContent = total;
+
+        // 특별 조합 메시지 판별
+        if (values[0] === values[1] && values[1] === values[2]) {
+          msgEl.textContent = `🎉 트리플! (${values[0]} 트리플) 대박!`;
+        } else if (values[0] === values[1] || values[1] === values[2] || values[0] === values[2]) {
+          msgEl.textContent = '✨ 더블! 같은 수가 2개 나왔어요.';
+        } else if (total >= 15) {
+          msgEl.textContent = '🔥 고득점! 운이 좋으시네요!';
+        } else {
+          msgEl.textContent = '한 번 더 도전해보세요!';
+        }
+
+        btn.disabled = false;
+      }, 500);
+    }
+  </script>
+</body>
+</html>
