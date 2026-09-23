@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아케이드 멀티게임 허브 (6-in-1)</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    h1 { font-size: 2rem; color: #a5b4fc; margin-bottom: 5px; }
+    p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      color: var(--text-muted);
+      border: 1px solid #334155;
+      padding: 10px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    
+    .game-container {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      max-width: 500px;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .game-panel { display: none; width: 100%; text-align: center; }
+    .game-panel.active { display: flex; flex-direction: column; align-items: center; }
+
+    button.action-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button.action-btn:hover { background: var(--accent-hover); }
+
+    /* 1. 주사위 */
+    .dice {
+      font-size: 80px;
+      margin: 20px 0;
+      transition: transform 0.2s;
+    }
+
+    /* 2. 카드 뒤집기 */
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+      width: 100%;
+    }
+    .card-tile {
+      height: 60px;
+      background: #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* 3. 2048 */
+    .grid-2048 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: #334155;
+      padding: 8px;
+      border-radius: 10px;
+      width: 280px;
+      height: 280px;
+      margin-top: 15px;
+    }
+    .tile-2048 {
+      background: #475569;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: white;
+    }
+
+    /* 4. 스피드 탭 */
+    .tap-target {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    /* 5. 뱀 게임 */
+    canvas#snakeCanvas {
+      background: #000;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    /* 6. 오목 */
+    canvas#omokCanvas {
+      background: #eab308;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎲 Arcade Central</h1>
+    <p class="subtitle">하나의 웹페이지에서 즐기는 6가지 미니 게임</p>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchGame(0)">🎲 주사위</button>
+    <button class="tab-btn" onclick="switchGame(1)">🎴 카드 맞추기</button>
+    <button class="tab-btn" onclick="switchGame(2)">🧩 2048</button>
+    <button class="tab-btn" onclick="switchGame(3)">⚡ 스피드 탭</button>
+    <button class="tab-btn" onclick="switchGame(4)">🐍 뱀 게임</button>
+    <button class="tab-btn" onclick="switchGame(5)">⚪ 오목</button>
+  </div>
+
+  <div class="game-container">
+    
+    <!-- 1. 주사위 게임 -->
+    <div class="game-panel active" id="game-0">
+      <h2>3D 주사위 굴리기</h2>
+      <div class="dice" id="diceDisplay">⚀</div>
+      <p id="diceResult">버튼을 눌러 주사위를 던져보세요!</p>
+      <button class="action-btn" onclick="rollDice()">주사위 던지기</button>
+    </div>
+
+    <!-- 2. 카드 맞추기 -->
+    <div class="game-panel" id="game-1">
+      <h2>기억력 카드 맞추기</h2>
+      <p id="memoryStatus">모든 짝을 찾아보세요!</p>
+      <div class="memory-grid" id="memoryBoard"></div>
+      <button class="action-btn" onclick="initMemoryGame()">재시작</button>
+    </div>
+
+    <!-- 3. 2048 게임 -->
+    <div class="game-panel" id="game-2">
+      <h2>2048 퍼즐</h2>
+      <p>방향키(↑, ↓, ←, →)를 눌러 합쳐보세요!</p>
+      <div class="grid-2048" id="board2048"></div>
+      <button class="action-btn" onclick="init2048()">새 게임</button>
+    </div>
+
+    <!-- 4. 스피드 탭 -->
+    <div class="game-panel" id="game-3">
+      <h2>반응속도 테스트</h2>
+      <p id="tapMsg">시작 버튼을 누르면 원이 초록색으로 바뀝니다.</p>
+      <div class="tap-target" id="tapTarget" onclick="handleTap()">대기 중</div>
+      <button class="action-btn" onclick="startTapGame()">테스트 시작</button>
+    </div>
+
+    <!-- 5. 뱀 게임 -->
+    <div class="game-panel" id="game-4">
+      <h2>클래식 스네이크</h2>
+      <p>방향키로 뱀을 조종하세요! 점수: <span id="snakeScore">0</span></p>
+      <canvas id="snakeCanvas" width="280" height="280"></canvas>
+      <button class="action-btn" onclick="startSnake()">게임 시작</button>
+    </div>
+
+    <!-- 6. 오목 -->
+    <div class="game-panel" id="game-5">
+      <h2>오목 (2인용 / 오프라인)</h2>
+      <p id="omokTurn">흑돌(⚫) 차례입니다.</p>
+      <canvas id="omokCanvas" width="280" height="280"></canvas>
+      <button class="action-btn" onclick="initOmok()">판 새로고침</button>
+    </div>
+
+  </div>
+
+  <script>
+    // 탭 전환 logic
+    function switchGame(index) {
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.game-panel').forEach((panel, i) => {
+        panel.classList.toggle('active', i === index);
+      });
+      if(index === 1) initMemoryGame();
+      if(index === 2) init2048();
+      if(index === 5) initOmok();
+    }
+
+    /* 1. 주사위 게임 */
+    const diceIcons = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    function rollDice() {
+      const dice = document.getElementById('diceDisplay');
+      const result = document.getElementById('diceResult');
+      let count = 0;
+      const interval = setInterval(() => {
+        dice.textContent = diceIcons[Math.floor(Math.random() * 6)];
+        count++;
+        if (count > 10) {
+          clearInterval(interval);
+          const finalNum = Math.floor(Math.random() * 6);
+          dice.textContent = diceIcons[finalNum];
+          result.textContent = `결과: ${finalNum + 1} 이 나왔습니다!`;
+        }
+      }, 50);
+    }
+
+    /* 2. 카드 뒤집기 */
+    const emojis = ['🍎', '🍌', '🍇', '🍒', '🍓', '🍋', '🥑', '🍉'];
+    let cards = [], flipped = [], matchedCount = 0;
+    function initMemoryGame() {
+      const board = document.getElementById('memoryBoard');
+      board.innerHTML = '';
+      cards = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+      flipped = []; matchedCount = 0;
+      document.getElementById('memoryStatus').textContent = '모든 짝을 찾아보세요!';
+      cards.forEach((emoji, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'card-tile';
+        tile.dataset.index = index;
+        tile.onclick = () => flipCard(tile, emoji);
+        board.appendChild(tile);
+      });
+    }
+    function flipCard(tile, emoji) {
+      if (flipped.length < 2 && !tile.textContent) {
+        tile.textContent = emoji;
+        tile.style.background = '#475569';
+        flipped.push({ tile, emoji });
+        if (flipped.length === 2) {
+          setTimeout(() => {
+            if (flipped[0].emoji === flipped[1].emoji) {
+              matchedCount += 2;
+              if (matchedCount === cards.length) {
+                document.getElementById('memoryStatus').textContent = '🎉 모두 맞췄습니다!';
+              }
+            } else {
+              flipped[0].tile.textContent = '';
+              flipped[1].tile.textContent = '';
+              flipped[0].tile.style.background = '#334155';
+              flipped[1].tile.style.background = '#334155';
+            }
+            flipped = [];
+          }, 600);
+        }
+      }
+    }
+
+    /* 3. 2048 퍼즐 */
+    let b2048 = Array(16).fill(0);
+    function init2048() {
+      b2048 = Array(16).fill(0);
+      add2048Tile(); add2048Tile();
+      render2048();
+    }
+    function add2048Tile() {
+      const emptySlots = b2048.map((v, i) => v === 0 ? i : null).filter(v => v !== null);
+      if (emptySlots.length) {
+        b2048[emptySlots[Math.floor(Math.random() * emptySlots.length)]] = Math.random() < 0.9 ? 2 : 4;
+      }
+    }
+    function render2048() {
+      const board = document.getElementById('board2048');
+      board.innerHTML = '';
+      b2048.forEach(val => {
+        const tile = document.createElement('div');
+        tile.className = 'tile-2048';
+        tile.textContent = val > 0 ? val : '';
+        if(val > 0) tile.style.background = '#6366f1';
+        board.appendChild(tile);
+      });
+    }
+
+    /* 4. 스피드 탭 */
+    let tapStartTime, tapTimeout;
+    function startTapGame() {
+      const target = document.getElementById('tapTarget');
+      const msg = document.getElementById('tapMsg');
+      target.style.background = '#ef4444';
+      target.textContent = '기다리세요...';
+      msg.textContent = '초록색으로 바뀌면 즉시 클릭하세요!';
+      clearTimeout(tapTimeout);
+      tapTimeout = setTimeout(() => {
+        target.style.background = '#22c55e';
+        target.textContent = '지금 클릭!';
+        tapStartTime = Date.now();
+      }, Math.random() * 2000 + 1500);
+    }
+    function handleTap() {
+      const target = document.getElementById('tapTarget');
+      const msg = document.getElementById('tapMsg');
+      if (target.style.background === 'rgb(34, 197, 94)') {
+        const diff = Date.now() - tapStartTime;
+        msg.textContent = `반응 속도: ${diff}ms !`;
+        target.textContent = '성공!';
+        target.style.background = '#6366f1';
+      } else if (target.style.background === 'rgb(239, 68, 68)') {
+        clearTimeout(tapTimeout);
+        msg.textContent = '너무 빨랐습니다! 다시 시도하세요.';
+        target.textContent = '실패';
+      }
+    }
+
+    /* 5. 뱀 게임 */
+    let snake = [], snakeDir = {x: 1, y: 0}, food = {}, snakeInterval, score = 0;
+    function startSnake() {
+      const canvas = document.getElementById('snakeCanvas');
+      const ctx = canvas.getContext('2d');
+      snake = [{x: 5, y: 5}]; snakeDir = {x: 1, y: 0}; score = 0;
+      document.getElementById('snakeScore').textContent = score;
+      placeFood();
+      clearInterval(snakeInterval);
+      snakeInterval = setInterval(() => {
+        const head = {x: snake[0].x + snakeDir.x, y: snake[0].y + snakeDir.y};
+        if(head.x < 0 || head.x >= 14 || head.y < 0 || head.y >= 14) return clearInterval(snakeInterval);
+        snake.unshift(head);
+        if(head.x === food.x && head.y === food.y) {
+          score += 10;
+          document.getElementById('snakeScore').textContent = score;
+          placeFood();
+        } else {
+          snake.pop();
+        }
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,280,280);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(food.x*20, food.y*20, 18, 18);
+        ctx.fillStyle = '#22c55e';
+        snake.forEach(p => ctx.fillRect(p.x*20, p.y*20, 18, 18));
+      }, 150);
+    }
+    function placeFood() { food = {x: Math.floor(Math.random()*14), y: Math.floor(Math.random()*14)}; }
+    window.addEventListener('keydown', e => {
+      if(e.key==='ArrowUp' && snakeDir.y===0) snakeDir = {x:0, y:-1};
+      if(e.key==='ArrowDown' && snakeDir.y===0) snakeDir = {x:0, y:1};
+      if(e.key==='ArrowLeft' && snakeDir.x===0) snakeDir = {x:-1, y:0};
+      if(e.key==='ArrowRight' && snakeDir.x===0) snakeDir = {x:1, y:0};
+    });
+
+    /* 6. 오목 */
+    let omokBoard = [], omokTurn = 1;
+    function initOmok() {
+      const cvs = document.getElementById('omokCanvas');
+      const ctx = cvs.getContext('2d');
+      omokBoard = Array(14).fill(0).map(() => Array(14).fill(0));
+      omokTurn = 1;
+      document.getElementById('omokTurn').textContent = '흑돌(⚫) 차례입니다.';
+      ctx.fillStyle = '#eab308'; ctx.fillRect(0,0,280,280);
+      ctx.strokeStyle = '#000';
+      for(let i=0; i<14; i++) {
+        ctx.beginPath(); ctx.moveTo(10 + i*20, 10); ctx.lineTo(10 + i*20, 270); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 10 + i*20); ctx.lineTo(270, 10 + i*20); ctx.stroke();
+      }
+    }
+    document.getElementById('omokCanvas').addEventListener('click', e => {
+      const rect = e.target.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left - 10) / 20);
+      const y = Math.round((e.clientY - rect.top - 10) / 20);
+      if(x>=0 && x<14 && y>=0 && y<14 && omokBoard[y][x] === 0) {
+        omokBoard[y][x] = omokTurn;
+        const ctx = e.target.getContext('2d');
+        ctx.beginPath();
+        ctx.arc(10 + x*20, 10 + y*20, 8, 0, Math.PI*2);
+        ctx.fillStyle = omokTurn === 1 ? '#000' : '#fff';
+        ctx.fill();
+        omokTurn = omokTurn === 1 ? 2 : 1;
+        document.getElementById('omokTurn').textContent = omokTurn === 1 ? '흑돌(⚫) 차례입니다.' : '백돌(⚪) 차례입니다.';
+      }
+    });
+
+    // 기본 게임 초기화
+    initMemoryGame();
+    init2048();
+    initOmok();
+  </script>
+</body>
+</html>
